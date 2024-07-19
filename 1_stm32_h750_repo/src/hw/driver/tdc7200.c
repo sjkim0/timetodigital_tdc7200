@@ -30,11 +30,6 @@ void tdc7200Init(void)
 	HAL_GPIO_WritePin(CSB_GPIO_Port, CSB_Pin, GPIO_PIN_SET);
 	delay(100);
 	// @ 1. Read All Register
-    while(true)
-    {
-        tdc7200ReadSpi(ENUM_TDC7200_CONFIG_1, &tdc7200_inst.reg_1_byte_data[0]);
-        delay(100);
-    }
 	while(true)
 	{
 		int start_index = ENUM_TDC7200_CONFIG_1;
@@ -57,15 +52,14 @@ void tdc7200Init(void)
 static void tdc7200ReadSpi(uint8_t addr, uint8_t *rx_buff)
 {
 	uint8_t tx_buff_byte[2] = {addr, };
-	uint8_t tx_buff_3_byte[5] = {addr, };
+	uint8_t tx_buff_3_byte[4] = {addr, };
     uint8_t rx_buff_byte[2] = {0, };
-    uint8_t rx_buff_3_byte[5] = {0, };
-	uint8_t *p_tx_buff;
-	uint8_t *p_rx_buff;
+    uint8_t rx_buff_3_byte[4] = {0, };
 	int length = 0;
 	int one_byte_data_spi_length = 2;
 	int three_byte_data_spi_length = 4;
 
+    HAL_GPIO_WritePin(CSB_GPIO_Port, CSB_Pin, GPIO_PIN_RESET);
 	switch(addr)
 	{
         case ENUM_TDC7200_CONFIG_1:
@@ -78,9 +72,9 @@ static void tdc7200ReadSpi(uint8_t addr, uint8_t *rx_buff)
         case ENUM_TDC7200_CLOCK_CNTR_OVF_L:
         case ENUM_TDC7200_CLOCK_CNTR_STOP_MASK_H:
         case ENUM_TDC7200_CLOCK_CNTR_STOP_MASK_L:
-            p_tx_buff = tx_buff_byte;
-            p_rx_buff = rx_buff_byte;
             length = one_byte_data_spi_length;
+            HAL_SPI_TransmitReceive(&hspi2, tx_buff_byte, rx_buff_byte, length, 0xFFFF);
+            rx_buff[0] = rx_buff_byte[1];
             break;
         case ENUM_TDC7200_TIME_1:
         case ENUM_TDC7200_CLOCK_COUNT_1:
@@ -95,26 +89,16 @@ static void tdc7200ReadSpi(uint8_t addr, uint8_t *rx_buff)
         case ENUM_TDC7200_TIME_6:
         case ENUM_TDC7200_CALIBRATION_1:
         case ENUM_TDC7200_CALIBRATION_2:
-            p_tx_buff = tx_buff_3_byte;
-            p_rx_buff = rx_buff_3_byte;
             length = three_byte_data_spi_length;
+            HAL_SPI_TransmitReceive(&hspi2, tx_buff_3_byte, rx_buff_3_byte, length, 0xFFFF);
+            rx_buff[0] = rx_buff_3_byte[3];
+            rx_buff[1] = rx_buff_3_byte[2];
+            rx_buff[2] = rx_buff_3_byte[1];
             break;
         default:
             return;
 	}
 
-	HAL_GPIO_WritePin(CSB_GPIO_Port, CSB_Pin, GPIO_PIN_RESET);
-	HAL_SPI_TransmitReceive(&hspi2, p_tx_buff, p_rx_buff, length, 0xFFFF);
 	HAL_GPIO_WritePin(CSB_GPIO_Port, CSB_Pin, GPIO_PIN_SET);
 
-	if(length == one_byte_data_spi_length)
-	{
-        rx_buff[0] = p_rx_buff[1];
-	}
-	else
-	{
-        rx_buff[0] = p_rx_buff[3];
-        rx_buff[1] = p_rx_buff[2];
-        rx_buff[2] = p_rx_buff[1];
-	}
 }
