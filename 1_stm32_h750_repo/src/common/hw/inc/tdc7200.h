@@ -1,0 +1,83 @@
+/*
+ * tdc7200.h
+ *
+ *  Created on: Jul 19, 2024
+ *      Author: ksj10
+ */
+
+#ifndef COMMON_HW_INC_TDC7200_H_
+#define COMMON_HW_INC_TDC7200_H_
+
+
+#include "hw_def.h"
+
+
+#define DEF_TDC7200_TIME_DATA_LEN      (3U)
+#define DEF_TDC7200_CALIBRATE_DATA_LEN (3U)
+
+
+enum ENUM_TDC7200_REG
+{
+	ENUM_TDC7200_CONFIG_1,
+	ENUM_TDC7200_CONFIG_2,
+	ENUM_TDC7200_INT_STATUS,
+	ENUM_TDC7200_INT_MASK,
+	ENUM_TDC7200_COARSE_CNTR_OVF_H,
+	ENUM_TDC7200_COARSE_CNTR_OVF_L,
+	ENUM_TDC7200_CLOCK_CNTR_OVF_H,
+	ENUM_TDC7200_CLOCK_CNTR_OVF_L,
+	ENUM_TDC7200_CLOCK_CNTR_STOP_MASK_H,
+	ENUM_TDC7200_CLOCK_CNTR_STOP_MASK_L,
+	ENUM_TDC7200_TIME_1,
+	ENUM_TDC7200_CLOCK_COUNT_1,
+	ENUM_TDC7200_TIME_2,
+	ENUM_TDC7200_CLOCK_COUNT_2,
+	ENUM_TDC7200_TIME_3,
+	ENUM_TDC7200_CLOCK_COUNT_3,
+	ENUM_TDC7200_TIME_4,
+	ENUM_TDC7200_CLOCK_COUNT_4,
+	ENUM_TDC7200_TIME_5,
+	ENUM_TDC7200_CLOCK_COUNT_5,
+	ENUM_TDC7200_TIME_6,
+	ENUM_TDC7200_CALIBRATION_1,
+	ENUM_TDC7200_CALIBRATION_2,
+	ENUM_TDC7200_REG_LENGTH
+};
+
+typedef struct
+{
+	uint8_t reg_1_byte_data[ENUM_TDC7200_CLOCK_CNTR_STOP_MASK_L + 1];
+	uint8_t reg_3_byte_data[ENUM_TDC7200_REG_LENGTH - ENUM_TDC7200_TIME_1 + 1][DEF_TDC7200_CALIBRATE_DATA_LEN];
+	uint8_t config_1;
+	uint8_t config_2;
+	uint8_t init_status;
+	uint8_t init_mask;
+	uint8_t coarse_cntr_ovf_h;
+	uint8_t coarse_cntr_ovf_l;
+	uint8_t clock_cntr_ovf_h;
+	uint8_t clock_cntr_ovf_l;
+	uint8_t clock_cntr_stop_mask_h;
+	uint8_t clock_cntr_stop_mask_l;
+	uint8_t time_1[DEF_TDC7200_TIME_DATA_LEN];
+	uint8_t clock_count_1[DEF_TDC7200_TIME_DATA_LEN];
+	uint8_t time_2[DEF_TDC7200_TIME_DATA_LEN];
+	uint8_t clock_count_2[DEF_TDC7200_TIME_DATA_LEN];
+	uint8_t time_3[DEF_TDC7200_TIME_DATA_LEN];
+	uint8_t clock_count_3[DEF_TDC7200_TIME_DATA_LEN];
+	uint8_t time_4[DEF_TDC7200_TIME_DATA_LEN];
+	uint8_t clock_count_4[DEF_TDC7200_TIME_DATA_LEN];
+	uint8_t time_5[DEF_TDC7200_TIME_DATA_LEN];
+	uint8_t clock_count_5[DEF_TDC7200_TIME_DATA_LEN];
+	uint8_t time_6[DEF_TDC7200_TIME_DATA_LEN];
+	uint8_t calibration_1[DEF_TDC7200_CALIBRATE_DATA_LEN];
+	uint8_t calibration_2[DEF_TDC7200_CALIBRATE_DATA_LEN];
+}tdc7200_t;
+
+
+extern tdc7200_t tdc7200_inst;
+
+
+void tdc7200Init(void);
+
+
+#endif /* COMMON_HW_INC_TDC7200_H_ */
