@@ -13,6 +13,8 @@
 
 tdc7200_t tdc7200_inst;
 
+static void tdc7200ReadSpi(uint8_t addr, uint8_t *rx_buff);
+
 
 void tdc7200Init(void)
 {
@@ -28,31 +30,91 @@ void tdc7200Init(void)
 	HAL_GPIO_WritePin(CSB_GPIO_Port, CSB_Pin, GPIO_PIN_SET);
 	delay(100);
 	// @ 1. Read All Register
-	int start_index = ENUM_TDC7200_CONFIG_1;
-	int stop_index = ENUM_TDC7200_CLOCK_CNTR_STOP_MASK_L;
-	for(int i = start_index; i <= stop_index; i++)
+    while(true)
+    {
+        tdc7200ReadSpi(ENUM_TDC7200_CONFIG_1, &tdc7200_inst.reg_1_byte_data[0]);
+        delay(100);
+    }
+	while(true)
 	{
-		uint8_t tx_buff[2] = {start_index, };
-		uint8_t rx_buff[2] = {0, };
-		HAL_GPIO_WritePin(CSB_GPIO_Port, CSB_Pin, GPIO_PIN_RESET);
-		HAL_SPI_TransmitReceive(&hspi2, tx_buff, rx_buff, 2, 0xFFFF);
-		HAL_GPIO_WritePin(CSB_GPIO_Port, CSB_Pin, GPIO_PIN_SET);
-
-		tdc7200_inst.reg_1_byte_data[i] = rx_buff[1];
+		int start_index = ENUM_TDC7200_CONFIG_1;
+		int stop_index = ENUM_TDC7200_CLOCK_CNTR_STOP_MASK_L;
+		for(int i = start_index; i <= stop_index; i++)
+		{
+			tdc7200ReadSpi(i, &tdc7200_inst.reg_1_byte_data[i]);
+			delay(100);
+		}
+		start_index = ENUM_TDC7200_TIME_1 - ENUM_TDC7200_TIME_1;
+		stop_index = ENUM_TDC7200_CALIBRATION_2 - ENUM_TDC7200_TIME_1;
+		for(int i = start_index; i <= stop_index; i++)
+		{
+            tdc7200ReadSpi(i + ENUM_TDC7200_TIME_1, tdc7200_inst.reg_3_byte_data[i]);
+			delay(100);
+		}
 	}
-	start_index = ENUM_TDC7200_TIME_1 - ENUM_TDC7200_TIME_1;
-	stop_index = ENUM_TDC7200_CALIBRATION_2 - ENUM_TDC7200_TIME_1;
-	for(int i = start_index; i <= stop_index; i++)
+}
+
+static void tdc7200ReadSpi(uint8_t addr, uint8_t *rx_buff)
+{
+	uint8_t tx_buff_byte[2] = {addr, };
+	uint8_t tx_buff_3_byte[5] = {addr, };
+    uint8_t rx_buff_byte[2] = {0, };
+    uint8_t rx_buff_3_byte[5] = {0, };
+	uint8_t *p_tx_buff;
+	uint8_t *p_rx_buff;
+	int length = 0;
+	int one_byte_data_spi_length = 2;
+	int three_byte_data_spi_length = 4;
+
+	switch(addr)
 	{
-		uint8_t tx_buff[5] = {start_index, };
-		uint8_t rx_buff[5] = {0, };
+        case ENUM_TDC7200_CONFIG_1:
+        case ENUM_TDC7200_CONFIG_2:
+        case ENUM_TDC7200_INT_STATUS:
+        case ENUM_TDC7200_INT_MASK:
+        case ENUM_TDC7200_COARSE_CNTR_OVF_H:
+        case ENUM_TDC7200_COARSE_CNTR_OVF_L:
+        case ENUM_TDC7200_CLOCK_CNTR_OVF_H:
+        case ENUM_TDC7200_CLOCK_CNTR_OVF_L:
+        case ENUM_TDC7200_CLOCK_CNTR_STOP_MASK_H:
+        case ENUM_TDC7200_CLOCK_CNTR_STOP_MASK_L:
+            p_tx_buff = tx_buff_byte;
+            p_rx_buff = rx_buff_byte;
+            length = one_byte_data_spi_length;
+            break;
+        case ENUM_TDC7200_TIME_1:
+        case ENUM_TDC7200_CLOCK_COUNT_1:
+        case ENUM_TDC7200_TIME_2:
+        case ENUM_TDC7200_CLOCK_COUNT_2:
+        case ENUM_TDC7200_TIME_3:
+        case ENUM_TDC7200_CLOCK_COUNT_3:
+        case ENUM_TDC7200_TIME_4:
+        case ENUM_TDC7200_CLOCK_COUNT_4:
+        case ENUM_TDC7200_TIME_5:
+        case ENUM_TDC7200_CLOCK_COUNT_5:
+        case ENUM_TDC7200_TIME_6:
+        case ENUM_TDC7200_CALIBRATION_1:
+        case ENUM_TDC7200_CALIBRATION_2:
+            p_tx_buff = tx_buff_3_byte;
+            p_rx_buff = rx_buff_3_byte;
+            length = three_byte_data_spi_length;
+            break;
+        default:
+            return;
+	}
 
-		HAL_GPIO_WritePin(CSB_GPIO_Port, CSB_Pin, GPIO_PIN_RESET);
-		HAL_SPI_TransmitReceive(&hspi2, tx_buff, rx_buff, 5, 0xFFFF);
-		HAL_GPIO_WritePin(CSB_GPIO_Port, CSB_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(CSB_GPIO_Port, CSB_Pin, GPIO_PIN_RESET);
+	HAL_SPI_TransmitReceive(&hspi2, p_tx_buff, p_rx_buff, length, 0xFFFF);
+	HAL_GPIO_WritePin(CSB_GPIO_Port, CSB_Pin, GPIO_PIN_SET);
 
-		tdc7200_inst.reg_3_byte_data[i][0] = rx_buff[3];
-		tdc7200_inst.reg_3_byte_data[i][1] = rx_buff[2];
-		tdc7200_inst.reg_3_byte_data[i][2] = rx_buff[1];
+	if(length == one_byte_data_spi_length)
+	{
+        rx_buff[0] = p_rx_buff[1];
+	}
+	else
+	{
+        rx_buff[0] = p_rx_buff[3];
+        rx_buff[1] = p_rx_buff[2];
+        rx_buff[2] = p_rx_buff[1];
 	}
 }
