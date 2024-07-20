@@ -10,6 +10,7 @@
 
 
 #include "hw.h"
+#include "ap_tdc7200.h"
 
 
 void apInit(void);

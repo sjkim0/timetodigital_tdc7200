@@ -18,6 +18,6 @@ void apMain(void)
 {
 	while(true)
 	{
-	    tdc7200Main();
+	    apTdc7200Main();
 	}
 }
