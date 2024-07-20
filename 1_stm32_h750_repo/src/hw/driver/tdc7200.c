@@ -5,12 +5,6 @@
  *      Author: ksj10
  */
 
-/*
- * TODO: DESCRIPT TDC
- * @ 0. TRIGGER -> measure done -> make rising pulse
- * @ 1. INTTERRUPT -> start -> GPIO set, measure done -> GPIO RESET
- */
-
 
 #include "tdc7200.h"
 #include "spi.h"
@@ -24,6 +18,9 @@ static void _tdc7200ReadSpi(uint8_t addr, uint8_t *rx_buff);
 static void _readAllReg(void);
 static void _startMeasure(void);
 
+uint32_t ok_count = 0;
+uint32_t err_count = 0;
+uint32_t err_buff[10000] = {0, };
 
 void tdc7200Init(void)
 {
@@ -31,15 +28,10 @@ void tdc7200Init(void)
 	 *
 	 * @ 0. Enable TDC
 	 * @ 1. Read All Register
+	 * @ 2. Set MEAS_MODE 2
 	 */
 
 	// @ 0. Enable TDC
-//    HAL_GPIO_WritePin(CSB_GPIO_Port, CSB_Pin, GPIO_PIN_SET);
-//    delay(10);
-//	HAL_GPIO_WritePin(ENABLE_GPIO_Port, ENABLE_Pin, GPIO_PIN_SET);
-//	delay(10);
-//	HAL_GPIO_WritePin(OEN_GPIO_Port, OEN_Pin, GPIO_PIN_SET);
-//	delay(10);
     HAL_GPIO_WritePin(OEN_GPIO_Port, OEN_Pin, GPIO_PIN_SET);
     HAL_GPIO_WritePin(ENABLE_GPIO_Port, ENABLE_Pin, GPIO_PIN_SET);
     HAL_GPIO_WritePin(CSB_GPIO_Port, CSB_Pin, GPIO_PIN_SET);
@@ -47,13 +39,11 @@ void tdc7200Init(void)
 	// @ 1. Read All Register
     _readAllReg();
 
-    // test reading 2
-    while(true)
-    {
-        _startMeasure();
-        delay(10);
-        _readAllReg();
-    }
+    //  test code
+    // @ 2. Set MEAS_MODE 2
+    tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_CONFIG_1] |= (0b01 << 2);
+    _tdc7200WriteSpi(ENUM_TDC7200_CONFIG_1, &tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_CONFIG_1]);
+    delay(100);
 }
 
 void tdc7200Main(void)
@@ -206,10 +196,6 @@ static void _startMeasure(void)
 
     // @ 1. MEASURE BIT SET
     tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_CONFIG_1] |= 1 << 0;
-
-    //  test code
-    // measure mode 2
-    tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_CONFIG_1] |= 1 << 1;
 
     _tdc7200WriteSpi(ENUM_TDC7200_CONFIG_1, &tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_CONFIG_1]);
 }

@@ -11,6 +11,15 @@
 
 #include "hw_def.h"
 
+/*
+ * TODO: DESCRIPT TDC
+ * @ 0. TRIGGER -> measure done -> make rising pulse
+ * @ 1. INTTERRUPT -> start -> GPIO set, measure done -> GPIO RESET
+ * @ 2. MEAS_MODE 2 -> count for reference clock
+ * @ 3. MEAS_MODE 1 -> not display count, but display timer's tick value,
+ *      but not fixed.. value(diff range about 40 ~ 60 in force cal)
+ *      Need to check more
+ */
 
 #define DEF_TDC7200_TIME_DATA_LEN      (3U)
 #define DEF_TDC7200_CALIBRATE_DATA_LEN (3U)
@@ -51,6 +60,7 @@ typedef struct
 	uint8_t reg_3_byte_data[ENUM_TDC7200_REG_LENGTH - ENUM_TDC7200_TIME_1][DEF_TDC7200_CALIBRATE_DATA_LEN];
 	GPIO_PinState trigg_pin;
 	GPIO_PinState interrupt_pin;
+	bool mode_2;
 }tdc7200_t;
 
 
