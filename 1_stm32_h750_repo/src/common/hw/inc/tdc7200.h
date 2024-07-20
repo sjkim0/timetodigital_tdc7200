@@ -48,29 +48,8 @@ typedef struct
 {
 	uint8_t reg_1_byte_data[ENUM_TDC7200_CLOCK_CNTR_STOP_MASK_L + 1];
 	uint8_t reg_3_byte_data[ENUM_TDC7200_REG_LENGTH - ENUM_TDC7200_TIME_1][DEF_TDC7200_CALIBRATE_DATA_LEN];
-	uint8_t config_1;
-	uint8_t config_2;
-	uint8_t init_status;
-	uint8_t init_mask;
-	uint8_t coarse_cntr_ovf_h;
-	uint8_t coarse_cntr_ovf_l;
-	uint8_t clock_cntr_ovf_h;
-	uint8_t clock_cntr_ovf_l;
-	uint8_t clock_cntr_stop_mask_h;
-	uint8_t clock_cntr_stop_mask_l;
-	uint8_t time_1[DEF_TDC7200_TIME_DATA_LEN];
-	uint8_t clock_count_1[DEF_TDC7200_TIME_DATA_LEN];
-	uint8_t time_2[DEF_TDC7200_TIME_DATA_LEN];
-	uint8_t clock_count_2[DEF_TDC7200_TIME_DATA_LEN];
-	uint8_t time_3[DEF_TDC7200_TIME_DATA_LEN];
-	uint8_t clock_count_3[DEF_TDC7200_TIME_DATA_LEN];
-	uint8_t time_4[DEF_TDC7200_TIME_DATA_LEN];
-	uint8_t clock_count_4[DEF_TDC7200_TIME_DATA_LEN];
-	uint8_t time_5[DEF_TDC7200_TIME_DATA_LEN];
-	uint8_t clock_count_5[DEF_TDC7200_TIME_DATA_LEN];
-	uint8_t time_6[DEF_TDC7200_TIME_DATA_LEN];
-	uint8_t calibration_1[DEF_TDC7200_CALIBRATE_DATA_LEN];
-	uint8_t calibration_2[DEF_TDC7200_CALIBRATE_DATA_LEN];
+	GPIO_PinState trigg_pin;
+	GPIO_PinState interrupt_pin;
 }tdc7200_t;
 
 
@@ -78,6 +57,7 @@ extern tdc7200_t tdc7200_inst;
 
 
 void tdc7200Init(void);
+void tdc7200Main(void);
 
 
 #endif /* COMMON_HW_INC_TDC7200_H_ */

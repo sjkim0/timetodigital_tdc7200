@@ -14,7 +14,6 @@ void hwInit(void)
 	bspInit();
 
 	MX_GPIO_Init();
-	MX_GPIO_Init();
 	MX_SPI2_Init();
 	MX_TIM1_Init();
 
