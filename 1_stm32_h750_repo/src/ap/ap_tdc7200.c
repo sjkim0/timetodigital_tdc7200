@@ -10,7 +10,18 @@
 #include "ap_tdc7200.h"
 
 
+ap_tdc7200_t ap_tdc7200_inst;
+
+
+void apTdc7200Init(void)
+{
+    ap_tdc7200_inst.state_measure_call = true;
+}
+
 void apTdc7200Main(void)
 {
-    tdc7200Main();
+    if(ap_tdc7200_inst.state_measure_call == true)
+    {
+        tdc7200Main();
+    }
 }

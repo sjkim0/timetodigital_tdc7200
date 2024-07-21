@@ -23,6 +23,7 @@
 
 #define DEF_TDC7200_TIME_DATA_LEN      (3U)
 #define DEF_TDC7200_CALIBRATE_DATA_LEN (3U)
+#define DEF_TICK_BUFF_LEN              (100U)
 
 
 enum ENUM_TDC7200_REG
@@ -80,6 +81,18 @@ enum ENUM_TDC7200_REG_2
     ENUM_TDC7200_REG_2_MEAS_COMPLETE_FLAG_1B
 };
 
+enum ENUM_NUM_STOP
+{
+    ENUM_NUM_STOP_SINGLE,
+    ENUM_NUM_STOP_TWO,
+    ENUM_NUM_STOP_THREE,
+    ENUM_NUM_STOP_FOUR,
+    ENUM_NUM_STOP_FIVE,
+};
+
+/*
+ * NUM STOP
+ */
 typedef struct
 {
 	uint8_t reg_1_byte_data[ENUM_TDC7200_CLOCK_CNTR_STOP_MASK_L + 1];
@@ -88,7 +101,12 @@ typedef struct
 	GPIO_PinState interrupt_pin;
 	bool mode_2;
 	bool stop_falling_set;
-	uint8_t num_stop;
+	uint8_t num_stop; // ENUM_NUM_STOP
+	int tick_buff_index;
+	uint32_t tick_buff[DEF_TICK_BUFF_LEN]; // MODE 1 TICK BUFF
+	int resolution_ps;
+	float period_ns_mode_1;
+	float period_ns_offset_mode_1;
 }tdc7200_t;
 
 

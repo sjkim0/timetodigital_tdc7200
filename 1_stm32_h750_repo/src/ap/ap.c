@@ -11,7 +11,7 @@
 
 void apInit(void)
 {
-
+    apTdc7200Init();
 }
 
 void apMain(void)

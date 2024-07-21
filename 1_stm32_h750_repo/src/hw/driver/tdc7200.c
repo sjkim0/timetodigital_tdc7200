@@ -12,16 +12,23 @@
 
 tdc7200_t tdc7200_inst;
 
-
 static void _tdc7200WriteSpi(uint8_t addr, uint8_t *tx_data);
 static void _tdc7200ReadSpi(uint8_t addr, uint8_t *rx_buff);
 static void _readAllReg(void);
+
+/*
+ * CONFIG 1 SET
+ */
 static void _startMeasure(void);
 static void _measureModeOneSet(void);
 static void _measureModeTwoSet(void);
 static void _stopedgeRisingSet(void);
 static void _stopedgeFallingSet(void);
+static void _forceCalSet(void);
 
+/*
+ * CONFIG 2 SET
+ */
 static void _numStopSet(void);
 
 /*
@@ -40,6 +47,14 @@ uint32_t err_buff[10000] = {0, };
 
 void tdc7200Init(void)
 {
+    // TODO: INIT instance
+    tdc7200_inst.resolution_ps = 55;  // 55ps
+    tdc7200_inst.period_ns_mode_1 = 0;
+    tdc7200_inst.period_ns_offset_mode_1 = 20;  // measured value
+    tdc7200_inst.stop_falling_set = false;
+    tdc7200_inst.mode_2 = false;
+    tdc7200_inst.num_stop = ENUM_NUM_STOP_FIVE;  // two stops
+
 	/* TODO:
 	 *
 	 * @ 0. Enable TDC
@@ -47,7 +62,6 @@ void tdc7200Init(void)
 	 * @ 2. Set MEAS_MODE
      * @ 3. Set edge
      * @ 4. Set number of stop
-     * @ 5. Start measure
 	 */
 
 	// @ 0. Enable TDC
@@ -60,7 +74,6 @@ void tdc7200Init(void)
 
     //  test code
     // @ 2. Set MEAS_MODE
-    tdc7200_inst.mode_2 = true;
     if(tdc7200_inst.mode_2 == false)
     {
         _measureModeOneSet();
@@ -69,8 +82,8 @@ void tdc7200Init(void)
     {
         _measureModeTwoSet();
     }
+    delay(100);
     // * @ 3. Set edge
-    tdc7200_inst.stop_falling_set = false;
     if(tdc7200_inst.stop_falling_set == true)
     {
         _stopedgeFallingSet();
@@ -79,14 +92,15 @@ void tdc7200Init(void)
     {
         _stopedgeRisingSet();
     }
+    delay(100);
+    // * @ 4. Force calibration
+    _forceCalSet();
+    delay(100);
 
     // * @ 4. Set number of stop
-    tdc7200_inst.num_stop = 1;  // two stops
     _numStopSet();
 
-    delay(10);
-    // @ 5. Start measure
-    _startMeasure();
+    delay(100);
 }
 
 void tdc7200Main(void)
@@ -94,26 +108,49 @@ void tdc7200Main(void)
     /*
      * TODO: READ GPIO_PIN, WRITE USER CMD
      * @ 1. READ ALL REGISTER
-     * @ 2. Clear Interrupt status register
+     * @ 2. Start Measure
      */
 
     // * @ 1. READ ALL REGISTER
     // tdc7200_inst.interrupt_pin = HAL_GPIO_ReadPin(INT_GPIO_Port, INT_Pin);
     _readAllReg();
-    // * @ 2. Clear Interrupt status register
-//    tdc7200_inst.interrupt_pin = HAL_GPIO_ReadPin(INT_GPIO_Port, INT_Pin);
-//    if(tdc7200_inst.interrupt_pin == GPIO_PIN_SET)
-//    {
-//        _clearNewMeasInt();
-//        _clearCoarseCntrOvfInt();
-//        _clearClockCntrOvfInt();
-//        _clearMeasStartedFlag();
-//        _clearMeasCompleteFlag();
-//        _tdc7200WriteSpi(ENUM_TDC7200_CONFIG_1, &tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_CONFIG_1]);
-//        _startMeasure();
-//    }
+
+    uint32_t timer4_tick = tdc7200_inst.reg_3_byte_data[6][0];
+    timer4_tick |= (tdc7200_inst.reg_3_byte_data[6][1] << 8);
+    timer4_tick |= (tdc7200_inst.reg_3_byte_data[6][2] << 16);
+    uint32_t timer5_tick = tdc7200_inst.reg_3_byte_data[8][0];
+    timer5_tick |= (tdc7200_inst.reg_3_byte_data[8][1] << 8);
+    timer5_tick |= (tdc7200_inst.reg_3_byte_data[8][2] << 16);
+
+    uint32_t diff_tick = 0;
+    if(timer5_tick > timer4_tick)
+    {
+        diff_tick = timer5_tick - timer4_tick;
+    }
+    else
+    {
+        diff_tick = timer4_tick - timer5_tick;
+    }
+    tdc7200_inst.tick_buff[tdc7200_inst.tick_buff_index] = diff_tick;
+    tdc7200_inst.tick_buff_index += 1;
+    if(tdc7200_inst.tick_buff_index == DEF_TICK_BUFF_LEN)
+    {
+        int ns_unit_divide = 1000;
+        double cal_buff = 0;
+        for(int i = 0; i < DEF_TICK_BUFF_LEN; i++)
+        {
+            cal_buff += tdc7200_inst.tick_buff[i];
+        }
+        cal_buff /= DEF_TICK_BUFF_LEN;
+        cal_buff = cal_buff * tdc7200_inst.resolution_ps / ns_unit_divide;
+        cal_buff -= tdc7200_inst.period_ns_offset_mode_1;
+
+        tdc7200_inst.period_ns_mode_1 = cal_buff;
+    }
+    tdc7200_inst.tick_buff_index %= DEF_TICK_BUFF_LEN;
     _startMeasure();
-    delay(100);
+
+    delay(1);
 }
 
 static void _tdc7200WriteSpi(uint8_t addr, uint8_t *tx_data)
@@ -262,6 +299,12 @@ static void _stopedgeRisingSet(void)
 static void _stopedgeFallingSet(void)
 {
     tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_CONFIG_1] |= (1 << ENUM_TDC7200_REG_0_STOP_EDGE_1B);
+    _tdc7200WriteSpi(ENUM_TDC7200_CONFIG_1, &tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_CONFIG_1]);
+}
+
+static void _forceCalSet(void)
+{
+    tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_CONFIG_1] |= (1 << ENUM_TDC7200_REG_0_FORCE_CAL_1B);
     _tdc7200WriteSpi(ENUM_TDC7200_CONFIG_1, &tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_CONFIG_1]);
 }
 
