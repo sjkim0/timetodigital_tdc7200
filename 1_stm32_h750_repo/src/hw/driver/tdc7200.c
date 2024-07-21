@@ -17,6 +17,22 @@ static void _tdc7200WriteSpi(uint8_t addr, uint8_t *tx_data);
 static void _tdc7200ReadSpi(uint8_t addr, uint8_t *rx_buff);
 static void _readAllReg(void);
 static void _startMeasure(void);
+static void _measureModeOneSet(void);
+static void _measureModeTwoSet(void);
+static void _stopedgeRisingSet(void);
+static void _stopedgeFallingSet(void);
+
+static void _numStopSet(void);
+
+/*
+ * Check
+ * Interrupt status check and clear
+ */
+static void _clearNewMeasInt(void);
+static void _clearCoarseCntrOvfInt(void);
+static void _clearClockCntrOvfInt(void);
+static void _clearMeasStartedFlag(void);
+static void _clearMeasCompleteFlag(void);
 
 uint32_t ok_count = 0;
 uint32_t err_count = 0;
@@ -28,7 +44,10 @@ void tdc7200Init(void)
 	 *
 	 * @ 0. Enable TDC
 	 * @ 1. Read All Register
-	 * @ 2. Set MEAS_MODE 2
+	 * @ 2. Set MEAS_MODE
+     * @ 3. Set edge
+     * @ 4. Set number of stop
+     * @ 5. Start measure
 	 */
 
 	// @ 0. Enable TDC
@@ -40,33 +59,61 @@ void tdc7200Init(void)
     _readAllReg();
 
     //  test code
-    // @ 2. Set MEAS_MODE 2
-    tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_CONFIG_1] |= (0b01 << 2);
-    _tdc7200WriteSpi(ENUM_TDC7200_CONFIG_1, &tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_CONFIG_1]);
-    delay(100);
+    // @ 2. Set MEAS_MODE
+    tdc7200_inst.mode_2 = true;
+    if(tdc7200_inst.mode_2 == false)
+    {
+        _measureModeOneSet();
+    }
+    else
+    {
+        _measureModeTwoSet();
+    }
+    // * @ 3. Set edge
+    tdc7200_inst.stop_falling_set = false;
+    if(tdc7200_inst.stop_falling_set == true)
+    {
+        _stopedgeFallingSet();
+    }
+    else
+    {
+        _stopedgeRisingSet();
+    }
+
+    // * @ 4. Set number of stop
+    tdc7200_inst.num_stop = 1;  // two stops
+    _numStopSet();
+
+    delay(10);
+    // @ 5. Start measure
+    _startMeasure();
 }
 
 void tdc7200Main(void)
 {
     /*
      * TODO: READ GPIO_PIN, WRITE USER CMD
-     * @ 1. READ TRIGG PIN
-     * @ 2. READ INTERRUPT PIN
+     * @ 1. READ ALL REGISTER
+     * @ 2. Clear Interrupt status register
      */
-    // * @ 1. READ TRIGG PIN
-    tdc7200_inst.trigg_pin = HAL_GPIO_ReadPin(TRG_GPIO_Port, TRG_Pin);
-    if(tdc7200_inst.trigg_pin == GPIO_PIN_SET)
-    {
-        tdc7200_inst.trigg_pin = GPIO_PIN_RESET;
-    }
 
-    // * @ 2. READ INTERRUPT PIN
-    tdc7200_inst.interrupt_pin = HAL_GPIO_ReadPin(INT_GPIO_Port, INT_Pin);
-    if(tdc7200_inst.interrupt_pin == GPIO_PIN_SET)
-    {
-        tdc7200_inst.interrupt_pin = GPIO_PIN_RESET;
-        _readAllReg();
-    }
+    // * @ 1. READ ALL REGISTER
+    // tdc7200_inst.interrupt_pin = HAL_GPIO_ReadPin(INT_GPIO_Port, INT_Pin);
+    _readAllReg();
+    // * @ 2. Clear Interrupt status register
+//    tdc7200_inst.interrupt_pin = HAL_GPIO_ReadPin(INT_GPIO_Port, INT_Pin);
+//    if(tdc7200_inst.interrupt_pin == GPIO_PIN_SET)
+//    {
+//        _clearNewMeasInt();
+//        _clearCoarseCntrOvfInt();
+//        _clearClockCntrOvfInt();
+//        _clearMeasStartedFlag();
+//        _clearMeasCompleteFlag();
+//        _tdc7200WriteSpi(ENUM_TDC7200_CONFIG_1, &tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_CONFIG_1]);
+//        _startMeasure();
+//    }
+    _startMeasure();
+    delay(100);
 }
 
 static void _tdc7200WriteSpi(uint8_t addr, uint8_t *tx_data)
@@ -189,13 +236,88 @@ static void _readAllReg(void)
 
 static void _startMeasure(void)
 {
-    /*
-     * TODO: MEASURE
-     * @ 1. MEASURE BIT SET
-     */
-
-    // @ 1. MEASURE BIT SET
-    tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_CONFIG_1] |= 1 << 0;
+    tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_CONFIG_1] |= (1 << ENUM_TDC7200_REG_0_START_MEAS_1B);
 
     _tdc7200WriteSpi(ENUM_TDC7200_CONFIG_1, &tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_CONFIG_1]);
 }
+
+static void _measureModeOneSet(void)
+{
+    tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_CONFIG_1] &= ~(0b01 << ENUM_TDC7200_REG_0_MEAS_MODE_2B);
+    _tdc7200WriteSpi(ENUM_TDC7200_CONFIG_1, &tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_CONFIG_1]);
+}
+
+static void _measureModeTwoSet(void)
+{
+    tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_CONFIG_1] |= (0b01 << ENUM_TDC7200_REG_0_MEAS_MODE_2B);
+    _tdc7200WriteSpi(ENUM_TDC7200_CONFIG_1, &tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_CONFIG_1]);
+}
+
+static void _stopedgeRisingSet(void)
+{
+    tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_CONFIG_1] &= ~(1 << ENUM_TDC7200_REG_0_STOP_EDGE_1B);
+    _tdc7200WriteSpi(ENUM_TDC7200_CONFIG_1, &tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_CONFIG_1]);
+}
+
+static void _stopedgeFallingSet(void)
+{
+    tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_CONFIG_1] |= (1 << ENUM_TDC7200_REG_0_STOP_EDGE_1B);
+    _tdc7200WriteSpi(ENUM_TDC7200_CONFIG_1, &tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_CONFIG_1]);
+}
+
+static void _numStopSet(void)
+{
+    tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_CONFIG_2] |= (tdc7200_inst.num_stop << ENUM_TDC7200_REG_1_NUM_STOP_3B);
+    _tdc7200WriteSpi(ENUM_TDC7200_CONFIG_2, &tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_CONFIG_2]);
+}
+
+static void _clearNewMeasInt(void)
+{
+    uint8_t *p_reg_data = &tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_INT_STATUS];
+
+    if(((*p_reg_data) & (1 << ENUM_TDC7200_REG_2_NEW_MEAS_INT_1B)) != 0)
+    {
+        tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_INT_STATUS] &= ~(1 << ENUM_TDC7200_REG_2_NEW_MEAS_INT_1B);
+    }
+}
+
+static void _clearCoarseCntrOvfInt(void)
+{
+    uint8_t *p_reg_data = &tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_INT_STATUS];
+
+    if(((*p_reg_data) & (1 << ENUM_TDC7200_REG_2_COARSE_CNTR_OVF_INT_1B)) != 0)
+    {
+        tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_INT_STATUS] &= ~(1 << ENUM_TDC7200_REG_2_COARSE_CNTR_OVF_INT_1B);
+    }
+}
+
+static void _clearClockCntrOvfInt(void)
+{
+    uint8_t *p_reg_data = &tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_INT_STATUS];
+
+    if(((*p_reg_data) & (1 << ENUM_TDC7200_REG_2_CLOCK_CNTR_OVF_INT_1B)) != 0)
+    {
+        tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_INT_STATUS] &= ~(1 << ENUM_TDC7200_REG_2_CLOCK_CNTR_OVF_INT_1B);
+    }
+}
+
+static void _clearMeasStartedFlag(void)
+{
+    uint8_t *p_reg_data = &tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_INT_STATUS];
+
+    if(((*p_reg_data) & (1 << ENUM_TDC7200_REG_2_MEAS_STARTED_FLAG_1B)) != 0)
+    {
+        tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_INT_STATUS] &= ~(1 << ENUM_TDC7200_REG_2_MEAS_STARTED_FLAG_1B);
+    }
+}
+
+static void _clearMeasCompleteFlag(void)
+{
+    uint8_t *p_reg_data = &tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_INT_STATUS];
+
+    if(((*p_reg_data) & (1 << ENUM_TDC7200_REG_2_MEAS_COMPLETE_FLAG_1B)) != 0)
+    {
+        tdc7200_inst.reg_1_byte_data[ENUM_TDC7200_INT_STATUS] &= ~(1 << ENUM_TDC7200_REG_2_MEAS_COMPLETE_FLAG_1B);
+    }
+}
+
