@@ -23,7 +23,7 @@
 
 #define DEF_TDC7200_TIME_DATA_LEN      (3U)
 #define DEF_TDC7200_CALIBRATE_DATA_LEN (3U)
-#define DEF_TICK_BUFF_LEN              (100U)
+#define DEF_TICK_BUFF_LEN              (30U)
 
 
 enum ENUM_TDC7200_REG
@@ -81,6 +81,27 @@ enum ENUM_TDC7200_REG_2
     ENUM_TDC7200_REG_2_MEAS_COMPLETE_FLAG_1B
 };
 
+
+enum ENUM_CALIBRATE2_PERIOD
+{
+    ENUM_CALIBRATE2_2_CLOCK,
+    ENUM_CALIBRATE2_10_CLOCK,
+    ENUM_CALIBRATE2_20_CLOCK,
+    ENUM_CALIBRATE2_40_CLOCK,
+};
+
+enum ENUM_AVG_CYCLE
+{
+    ENUM_AVG_CYCLE_1,
+    ENUM_AVG_CYCLE_2,
+    ENUM_AVG_CYCLE_4,
+    ENUM_AVG_CYCLE_8,
+    ENUM_AVG_CYCLE_16,
+    ENUM_AVG_CYCLE_32,
+    ENUM_AVG_CYCLE_64,
+    ENUM_AVG_CYCLE_128,
+};
+
 enum ENUM_NUM_STOP
 {
     ENUM_NUM_STOP_SINGLE,
@@ -101,12 +122,17 @@ typedef struct
 	GPIO_PinState interrupt_pin;
 	bool mode_2;
 	bool stop_falling_set;
+	uint8_t calibrate2_period; // ENUM_CALIBRATE2_PERIOD
+    uint8_t avg_cycle; // ENUM_AVG_CYCLE
 	uint8_t num_stop; // ENUM_NUM_STOP
 	int tick_buff_index;
 	uint32_t tick_buff[DEF_TICK_BUFF_LEN]; // MODE 1 TICK BUFF
 	int resolution_ps;
 	float period_ns_mode_1;
 	float period_ns_offset_mode_1;
+    float period_ns_mode_2;
+	float calibrate_ns;
+	uint32_t mode_2_resolution_ns;
 }tdc7200_t;
 
 
